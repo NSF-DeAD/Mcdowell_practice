@@ -1,0 +1,76 @@
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(readr)
+
+# Load the CSV file
+file_path <- 'mcdowell_practice_2024_09_04.csv'
+data <- read_csv(file_path)
+
+# Convert numeric columns to numeric data types, coercing errors to NA
+numeric_columns <- c('Ht. (cm)', 'Litter depth (mm)')
+data[numeric_columns] <- lapply(data[numeric_columns], as.numeric)
+
+# Optionally, drop rows with NA values in numeric columns
+data_numeric <- data %>% drop_na(numeric_columns)
+
+# Set the overall plot style using theme_minimal
+theme_set(theme_minimal())
+
+# Create bar plots for categorical columns
+categorical_columns <- c('Top Layer', 'Lower Code 1', 'Lower Code 2', 'Lower Code 3', 'Soil Surface', 'Microsite')
+
+# Plotting function for categorical columns
+for (column in categorical_columns) {
+  ggplot(data, aes_string(x = column)) +
+    geom_bar(fill = "lightblue") +
+    ggtitle(paste("Distribution of", column)) +
+    xlab(column) + ylab("Count") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggsave(paste0("descriptive_stats_", column, ".jpg"), dpi = 300, width = 6, height = 4)
+}
+
+# Create box plots to show the relationship between categorical columns and height
+for (column in categorical_columns) {
+  ggplot(data, aes_string(x = column, y = 'Ht. (cm)')) +
+    geom_boxplot(fill = "lightblue") +
+    ggtitle(paste("Height (cm) vs", column)) +
+    xlab(column) + ylab("Height (cm)") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggsave(paste0("height_vs_", column, ".jpg"), dpi = 300, width = 6, height = 4)
+}
+
+# Create box plots to show the relationship between categorical columns and litter depth
+for (column in categorical_columns) {
+  ggplot(data, aes_string(x = column, y = 'Litter depth (mm)')) +
+    geom_boxplot(fill = "lightgreen") +
+    ggtitle(paste("Litter Depth (mm) vs", column)) +
+    xlab(column) + ylab("Litter Depth (mm)") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggsave(paste0("litter_vs_", column, ".jpg"), dpi = 300, width = 6, height = 4)
+}
+
+# Create box plots without outliers for height (Ht. (cm)) vs categorical columns
+for (column in categorical_columns) {
+  ggplot(data, aes_string(x = column, y = 'Ht. (cm)')) +
+    geom_boxplot(fill = "lightblue", outlier.shape = NA) +
+    ggtitle(paste("Height (cm) vs", column, "(No Outliers)")) +
+    xlab(column) + ylab("Height (cm)") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggsave(paste0("height_vs_", column, "_no_outliers.jpg"), dpi = 300, width = 6, height = 4)
+}
+
+# Remove rows with NA values in height or litter depth
+data_clean <- data %>% drop_na(numeric_columns)
+
+# Calculate the Pearson correlation coefficient
+cor_result <- cor.test(data_clean$`Ht. (cm)`, data_clean$`Litter depth (mm)`)
+cat(sprintf("Pearson correlation coefficient: %.2f, p-value: %.4f\n", cor_result$estimate, cor_result$p.value))
+
+# Create a scatter plot with a regression line
+ggplot(data_clean, aes(x = `Ht. (cm)`, y = `Litter depth (mm)`)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  ggtitle(sprintf("Correlation between Height and Litter Depth\nPearson r: %.2f", cor_result$estimate)) +
+  xlab("Height (cm)") + ylab("Litter Depth (mm)") +
+  ggsave("correlation_height_litterdepth.jpg", dpi = 300, width = 8, height = 6)
